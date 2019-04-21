@@ -33,7 +33,7 @@ class ProbDist:
 
     def _set_variables(self, data:dict):
         self.data = ProbDist.normalize_data(self.data)
-        self.values = list(data.keys())
+        self.values = np.array(list(data.keys()))
         self.probs = np.array(list(data.values()))
 
 
@@ -94,8 +94,9 @@ class ProbDist:
         cond_data = ProbDist.normalize_data(cond_data)
         return np.random.choice(a=list(cond_data.keys()), p=list(cond_data.values()), size=num_values)
 
-    def _get_random_values_include_condition(self, values, condition):
-        pass
+    def _get_random_values_include_condition(self, condition, num_values=1):
+        indices = np.apply_along_axis(condition, 0, self.values)
+        return np.random.choice(a=self.values[indices], p = ProbDist.normalize_list(self.probs[indices]), size=num_values)
 
 class ConditionalProbDist:
     pass

@@ -53,7 +53,7 @@ class InstantiationTest(unittest.TestCase):
         values = ['.25', '.3', '.45', '.25']
         weights = [20, 30, 45, 5]
         p = ProbDist(values= values, probs = weights)
-        self.assertEqual(['.25', '.3', '.45'], p.values)
+        self.assertTrue((['.25', '.3', '.45'] == p.values).all())
         self.assertTrue(np.array(np.array([.25, .3, .45]) == p.probs).all())
         self.assertTrue(p.verify_probabilities())
 
@@ -80,7 +80,7 @@ class RandomValueTest(unittest.TestCase):
 
         print(pd.Series(results).value_counts())"""
         #for whatever reason, the above always results in one duplicated name with a count of 1
-        print(pd.Series(p.get_random_value(1000000)).value_counts())
+        #print(pd.Series(p.get_random_value(1000000)).value_counts())
         #TODO:  some comparison to the theoretical dist
 
         d = {1: 1/6, 2: 1/6, 3: 1/6, 4: 1/6, 5: 1/6, 6: 1/6}
@@ -98,24 +98,21 @@ class RandomValueTest(unittest.TestCase):
         for i in range(1000000):
             results.append(p.get_random_value())
 
-        print(pd.Series(results).value_counts())
         self.fail('Why did it fail when it was supposeed to skip it?')
 
-class ConditionalRandomValuesTest(unittest.TestCase):
+class ConditionalRandomValuesTestWithList(unittest.TestCase):
 
     def test_get_random_values_include_list(self):
         d = {1: 1/6, 2: 1/6, 3: 1/6, 4: 1/6, 5: 1/6, 6: 1/6}
         dist = ProbDist(d)
 
         random_evens = dist._get_random_values_include_list([2, 4, 6], 100000)
-        print(pd.Series(random_evens).value_counts())
         self.assertAlmostEqual(4, random_evens.mean(), delta=0.05)
         for num in random_evens:
             if num % 2 == 1:
                 self.fail(str(num) + ' was odd')
 
         random_odds = dist._get_random_values_include_list([1, 3, 5], 100000)
-        print(pd.Series(random_odds).value_counts())
         self.assertAlmostEqual(3, random_odds.mean(), delta=.05)
         pd.Series(random_odds).apply(self.fail_if_even)
         #TODO: investigate if it is faster to create a Series and apply the function, or do a for statement
@@ -126,13 +123,11 @@ class ConditionalRandomValuesTest(unittest.TestCase):
 
         random_evens = dist._get_random_values_exclude_list([1, 3, 5], 100000)
         evens_series = pd.Series(random_evens)
-        print(evens_series.value_counts())
         self.assertAlmostEqual(4, random_evens.mean(), delta=0.05)
         evens_series.apply(self.fail_if_odd)
 
         random_odds = dist._get_random_values_exclude_list([2, 4, 6], 100000)
         odds_series = pd.Series(random_odds)
-        print(odds_series.value_counts())
         self.assertAlmostEqual(3, random_odds.mean(), delta=.05)
         odds_series.apply(self.fail_if_even)
 
@@ -144,3 +139,77 @@ class ConditionalRandomValuesTest(unittest.TestCase):
         if number % 2 == 1:
             self.fail(str(number) + ' was odd')
 
+
+class ConditionalRandomValuesTestWithLambda(unittest.TestCase):
+
+    def test_lambda_less_than(self):
+        probdist = ProbDist({1:1, 2:2, 3:3, 4:4})
+        num_values = 10000000
+        values = probdist._get_random_values_include_condition(lambda x: x < 3, num_values=num_values)
+        counts = pd.Series(values).value_counts()
+        theoretical_1 = num_values / 3
+        theoretical_2 = 2 * num_values / 3
+
+        self.assertAlmostEqual(theoretical_1 / counts[1], 1, delta=.05)
+        self.assertAlmostEqual(theoretical_2 /  counts[2], 1, delta=.05)
+
+    def test_lambda_even_odd(self):
+        delta = 0.05
+        probdist = ProbDist({1:1, 2:2, 3:3, 4:4})
+        num_values = 10000000
+        values = probdist._get_random_values_include_condition(lambda x: x % 2 == 0, num_values)
+        counts = pd.Series(values).value_counts()
+        theoretical_2 = num_values / 3
+        theoretical_4 = 2 * num_values / 3
+        self.assertAlmostEqual(theoretical_2 / counts[2], 1, delta=delta)
+        self.assertAlmostEqual(theoretical_4 / counts[4], 1, delta=delta)
+
+        values = probdist._get_random_values_include_condition(lambda x: x % 2 == 1, num_values)
+        counts = pd.Series(values).value_counts()
+        theoretical_1 = num_values / 4
+        theoretical_3 = 3 * num_values / 4
+        self.assertAlmostEqual(theoretical_1 / counts[1], 1, delta=delta)
+        self.assertAlmostEqual(theoretical_3 / counts[3], 1, delta=delta)
+
+
+    def test_function_less_than(self):
+
+        def is_less_than_three(x):
+            return x < 3
+
+        probdist = ProbDist({1:1, 2:2, 3:3, 4:4})
+        num_values = 10000000
+        values = probdist._get_random_values_include_condition(is_less_than_three, num_values=num_values)
+        counts = pd.Series(values).value_counts()
+        theoretical_1 = num_values / 3
+        theoretical_2 = 2 * num_values / 3
+
+        self.assertAlmostEqual(theoretical_1 / counts[1], 1, delta=.05)
+        self.assertAlmostEqual(theoretical_2 /  counts[2], 1, delta=.05)
+
+
+    def test_function_even_odd(self):
+
+        def is_even(x):
+            return x % 2 == 0
+
+        def is_odd(x):
+            return x % 2 == 1
+
+        delta = 0.05
+        probdist = ProbDist({1:1, 2:2, 3:3, 4:4})
+        num_values = 10000000
+        values = probdist._get_random_values_include_condition(is_even, num_values)
+        counts = pd.Series(values).value_counts()
+        theoretical_2 = num_values / 3
+        theoretical_4 = 2 * num_values / 3
+
+        self.assertAlmostEqual(theoretical_2 / counts[2], 1, delta=delta)
+        self.assertAlmostEqual(theoretical_4 / counts[4], 1, delta=delta)
+
+        values = probdist._get_random_values_include_condition(is_odd, num_values)
+        counts = pd.Series(values).value_counts()
+        theoretical_1 = num_values / 4
+        theoretical_3 = 3 * num_values / 4
+        self.assertAlmostEqual(theoretical_1 / counts[1], 1, delta=delta)
+        self.assertAlmostEqual(theoretical_3 / counts[3], 1, delta=delta)
