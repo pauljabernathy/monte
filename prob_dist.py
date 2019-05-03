@@ -31,6 +31,9 @@ class ProbDist:
             raise Exception("You must provide items values and probabilities.")
         self.id = id
 
+    def __str__(self):
+        return self.id
+
     def _set_variables(self, data:dict):
         self.data = ProbDist.normalize_data(self.data)
         self.values = np.array(list(data.keys()))
