@@ -22,6 +22,17 @@ class TestNormalize(unittest.TestCase):
         probs = ProbDist.normalize_list(probs)
         self.assertTrue(np.array(np.array([.25, .3, .45]) == probs).all())
 
+    def test_denormalize_inplace_is_False(self):
+        probs = {'.25': 0.25, '.3': 0.3, '.45': 0.45}
+        data = ProbDist.denormalize(probs, 100)
+        self.assertEqual({'.25': 25, '.3': 30, '.45': 45}, data)
+        self.assertEqual({'.25': 0.25, '.3': 0.3, '.45': 0.45}, probs)
+
+    def test_denormalize_inplace_is_True(self):
+        probs = {'.25': 0.25, '.3': 0.3, '.45': 0.45}
+        data = ProbDist.denormalize(probs, 100, inplace=True)
+        self.assertEqual({'.25': 25, '.3': 30, '.45': 45}, data)
+        self.assertEqual(data, probs)
 
 class InstantiationTest(unittest.TestCase):
 
@@ -30,6 +41,7 @@ class InstantiationTest(unittest.TestCase):
         p = ProbDist(data)
         self.assertTrue(np.array(np.array([.25, .3, .45]) == p.probs).all())
         self.assertTrue(p.verify_probabilities())
+        self.assertEqual(100, p.confidence)
 
 
     def test_instantiate_with_dict_and_lists(self):
@@ -40,6 +52,7 @@ class InstantiationTest(unittest.TestCase):
         p = ProbDist(data, values= values, probs = weights)
         self.assertTrue(np.array(np.array([.25, .3, .45]) == p.probs).all())
         self.assertTrue(p.verify_probabilities())
+        self.assertEqual(100, p.confidence)
 
     def test_instantiate_with_lists(self):
         values = ['.25', '.3', '.45']
@@ -47,6 +60,7 @@ class InstantiationTest(unittest.TestCase):
         p = ProbDist(values= values, probs = weights)
         self.assertTrue(np.array(np.array([.25, .3, .45]) == p.probs).all())
         self.assertTrue(p.verify_probabilities())
+        self.assertEqual(100, p.confidence)
 
     def test_repeated_items_are_combined(self):
         """only applicable if using a pair of lists, not a dictionary"""
@@ -56,6 +70,7 @@ class InstantiationTest(unittest.TestCase):
         self.assertTrue((['.25', '.3', '.45'] == p.values).all())
         self.assertTrue(np.array(np.array([.25, .3, .45]) == p.probs).all())
         self.assertTrue(p.verify_probabilities())
+        self.assertEqual(100, p.confidence)
 
     def test_raise_exception_for_mismatched_lengths(self):
         items = ['.25', '.3', '.45', '46']
@@ -67,6 +82,7 @@ class InstantiationTest(unittest.TestCase):
 
     def test_raises_exception_for_no_values_or_probs(self):
         pass
+        #TODO
 
 class RandomValueTest(unittest.TestCase):
 
@@ -213,3 +229,22 @@ class ConditionalRandomValuesTestWithLambda(unittest.TestCase):
         theoretical_3 = 3 * num_values / 4
         self.assertAlmostEqual(theoretical_1 / counts[1], 1, delta=delta)
         self.assertAlmostEqual(theoretical_3 / counts[3], 1, delta=delta)
+
+
+class TestMerge(unittest.TestCase):
+
+    def test_merge_inplace_no_new_values(self):
+        original = ProbDist({'heads': 50, 'tails': 50})
+        new = ProbDist({'heads': 50, 'tails': 100})
+        merged = original.merge({'heads': 50, 'tails': 100})
+        self.assertEqual({'heads': 2/5, 'tails': 3/5}, original.data)
+        self.assertEqual({'heads': 1/3, 'tails': 2/3}, new.data)
+        self.assertEqual(original.data, merged.data)
+
+    def test_merge_not_in_place_new_values(self):
+        original = ProbDist({'heads': 50, 'tails': 50})
+        new = ProbDist({'heads': 50, 'tails': 100})
+        merged = original.merge({'heads': 50, 'tails': 100}, inplace=False)
+        self.assertEqual({'heads': 0.5, 'tails': 0.5}, original.data)
+        self.assertEqual({'heads': 1/3, 'tails': 2/3}, new.data)
+        self.assertNotEqual(original.data, merged.data)

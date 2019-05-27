@@ -2,9 +2,10 @@ import numpy as np
 
 class ProbDist:
     #TODO: a hash or UUID to make a unique identifier; a function to create a default if none is given
-    def __init__(self, data:dict = None, values = None, probs: list = None, id=None):
+    def __init__(self, data:dict = None, values = None, probs: list = None, id=None, confidence=None):
         """if a data dictionary is given, those values are used
         otherwise, it uses items and probs
+
         """
         if data is not None:
             self.data = data
@@ -35,6 +36,7 @@ class ProbDist:
         return self.id
 
     def _set_variables(self, data:dict):
+        self.confidence = sum(data.values())
         self.data = ProbDist.normalize_data(self.data)
         self.values = np.array(list(data.keys()))
         self.probs = np.array(list(data.values()))
@@ -62,6 +64,17 @@ class ProbDist:
             return [x / total for x in probs]
         elif isinstance(probs, np.ndarray):
             return probs / probs.sum()
+
+    @staticmethod
+    def denormalize(probs_dict, confidence, inplace=False):
+        if inplace:
+            denormalized_data = probs_dict
+        else:
+            denormalized_data = {}
+        for k, v in probs_dict.items():
+            denormalized_data[k] = probs_dict[k] * confidence
+        return denormalized_data
+
 
     def get_random_value(self, num_values=1):
         return np.random.choice(a=self.values, size=num_values, p=self.probs)
@@ -100,6 +113,24 @@ class ProbDist:
     def _get_random_values_include_condition(self, condition, num_values=1):
         indices = np.apply_along_axis(condition, 0, self.values)
         return np.random.choice(a=self.values[indices], p = ProbDist.normalize_list(self.probs[indices]), size=num_values)
+
+    def merge(self, additional_data_dict:dict, inplace=True):
+        """
+        Merge additional data with this ProbDist.  Where keys are equal, the probabilities will be combined.  Where
+        the new data has new keys, they will be added.
+        :param additional_probs_dict: denormalized data to merge with this ProbDist
+        :return:
+        """
+        new_data = self.denormalize(self.data, self.confidence, inplace)
+        for k, v in additional_data_dict.items():
+            new_data[k] += additional_data_dict[k]
+
+        new_data = self.normalize_data(new_data)
+        if inplace:
+            self.data = new_data
+            self._set_variables(self.data)
+        return ProbDist(new_data)
+
 
 class ConditionalProbDist:
     pass
