@@ -1,6 +1,9 @@
 from prob_dist import *
 import pandas as pd
 
+DEFAULT_CHAIN_LENGTH = 100000
+DEFAULT_NUM_CHAINS = 1000
+
 #rooms in house 1
 PANTRY = 'pantry'
 KITCHEN = 'kitchen'
@@ -45,18 +48,21 @@ dist_map = {
     MASTER_BATHROOM: master_batrhoom_probs
 }
 
-def do_rooms_transitions():
-    #start in kitchen, get next room
-    current_room = KITCHEN
-    num_transitions = 1000000
+def make_one_chain(chain_length=DEFAULT_CHAIN_LENGTH):
+    current_room = np.random.choice([k for k, v in dist_map.items()])
+
     chain = [current_room]
-    for i in range(num_transitions):
+    for i in range(chain_length):
         current_room = dist_map[current_room].get_random_value()[0]
-        #print(current_room)
         chain.append(current_room)
 
-    return chain
+    return pd.Series(chain, name=current_room)
 
 
-chain = do_rooms_transitions()
-print(pd.Series(chain).value_counts())
+def do_sim(num_chains=DEFAULT_NUM_CHAINS, chain_length=DEFAULT_CHAIN_LENGTH):
+    for i in range(num_chains):
+        print()
+        chain = make_one_chain(chain_length)
+        print(pd.Series(chain).value_counts())
+
+do_sim(num_chains=10, chain_length=10000)
