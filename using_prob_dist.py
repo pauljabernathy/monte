@@ -54,20 +54,6 @@ def test_conditional():
     #random_values = dist_map[sun.get_random_value()[0]].get_random_value(10000)
     #print(pd.Series(random_values).value_counts())
 
-    '''print(pd.Series(sun.get_random_value(10000)).value_counts())
-
-    print('\noutside given sun')
-    print(pd.Series(go_outside_given_sun.get_random_value(10000)).value_counts())
-
-    print('\noutside given rain')
-    print(pd.Series(go_outside_given_rain.get_random_value(10000)).value_counts())
-
-    print('\noutside given clouuds')
-    print(pd.Series(go_outside_given_clouds.get_random_value(10000)).value_counts())
-
-    random_dists = dist_map[sun.get_random_value(10000)[0]]
-    print(pd.Series(random_dists).value_counts())'''
-
     #Now get many random weathers and for each, get a random action of going outside or not
     #I am not at all excited about declaring functions inside functions and accessing variables out of the function's scope.
     #But I was trying to do it with apply() and not a for statement and this is a way I found to do it.
@@ -102,5 +88,66 @@ def test_conditional():
     print('\nActual Results')
     print(results_df.outside.value_counts())
 
+
+def chain_prob_dists_mc():
+
+    A = ProbDist({'B': 9, 'False': 1}, id='A')
+    B = ProbDist({'C': 9, 'False': 1}, id='B')
+    C = ProbDist({'D': 9, 'False': 1}, id='C')
+    D = ProbDist({'E': 9, 'False': 1}, id='D')
+    E = ProbDist({'True': 1}, id='True')
+    F = ProbDist({'False': 1}, id='False')
+    prob_dist_map = {
+        'A': A,
+        'B': B,
+        'C': C,
+        'D': D,
+        'E': E,
+        'False': F
+    }
+
+    num_chains = 10000
+    results = []
+    for i in range(num_chains):
+        results.append(get_random_prob_dist_chain(prob_dist_map, 'A', 0))
+    print(pd.Series(results).value_counts())
+
+    print()
+    results = []
+    for i in range(num_chains):
+        results.append(get_random_prob_dist_chain(prob_dist_map, 'A', 1))
+    print(pd.Series(results).value_counts())
+
+    print()
+    results = []
+    for i in range(num_chains):
+        results.append(get_random_prob_dist_chain(prob_dist_map, 'A', 2))
+    print(pd.Series(results).value_counts())
+
+    print()
+    results = []
+    for i in range(num_chains):
+        results.append(get_random_prob_dist_chain(prob_dist_map, 'A', 3))
+    print(pd.Series(results).value_counts())
+
+    print(4)
+    results = []
+    for i in range(num_chains):
+        results.append(get_random_prob_dist_chain(prob_dist_map, 'A', 4))
+    print(pd.Series(results).value_counts())
+
+
+def get_random_prob_dist(prob_dist_map, prob_dist_name):
+    return prob_dist_map[prob_dist_map[prob_dist_name].get_random_value()[0]]
+
+
+def get_random_prob_dist_chain(prob_dist_map, prob_dist_name, chain_length):
+    for i in range(chain_length):
+        prob_dist_name = prob_dist_map[prob_dist_name].get_random_value()[0]
+    return prob_dist_map[prob_dist_name].get_random_value()[0]
+
 #test_joint_dists()
-test_conditional()
+#test_conditional()
+chain_prob_dists_mc()
+
+
